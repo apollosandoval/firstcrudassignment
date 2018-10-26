@@ -59,7 +59,7 @@ app.post('/create/:name', function(req, res) {
         });
         fs.writeFile(filepath, JSON.stringify(data), 'utf8', (err, data) => {
             if (err) throw err;
-            res.status(200).send(data);
+            return res.status(200).send(data);
         });
     });
 });
@@ -76,8 +76,7 @@ app.put('/update/:id', function(req, res) {
         data = JSON.parse(data);
 
         // uses IIFE to confirm existance of a user with given id
-        // if user exists IIFE evaluates to true, if doesn't exist IIFE evaluates to false
-        // if user exists skip 'if' statement, if doesn't exist return status 404
+        // if user exists IIFE updates user parameters then writes updates to file
         if( ((id, arr) => {
             for (let user of arr) {
                 if (user.id === id) {
@@ -90,8 +89,9 @@ app.put('/update/:id', function(req, res) {
         })(id, data["users"])) {
             fs.writeFile(filepath, JSON.stringify(data), 'utf8', (err) => {
                 if (err) throw err;
-                res.send('updated successfully');
+                return res.send('updated successfully');
             })
+        // if user doesn't exist respond with 404 status
         } else {
             return res.status(404).send('user not found');
         }
@@ -100,25 +100,26 @@ app.put('/update/:id', function(req, res) {
 
 // delete a user by id
 app.delete('/remove/:id', function(req, res) {
-    let id = req.params.id;
+    let id = parseInt(req.params.id);
 
     fs.readFile(filepath, 'utf8', (err, data) => {
         if (err) throw err;
         data = JSON.parse(data);
 
-        // verify user under given id exists
-        if (!data["users"][`${id}`]) {
-            return res.status(404).send('user not found');
+        for (let user of data["users"]) {
+            if (user.id === id) {
+                // console.log(data["users"].indexOf(user));
+                // return res.send('found them');
+                let index = data["users"].indexOf(user);
+                data["users"].splice(index, 1);
+                fs.writeFile(filepath, JSON.stringify(data), 'utf8', (err) => {
+                    if (err) throw err;
+                    res.send('successfully removed');
+                });
+                return;
+            }
         }
-        console.log(data["users"][`${id}`]);
-        let index = data["users"].indexOf(data["users"][`${id}`]);
-        // data["users"].splice(index, 1);
-        // fs.writeFile(filepath, JSON.stringify(data), 'utf8', (err) => {
-        //     if (err) throw err;
-        //     res.send('removed successfully');
-        // })
-        // console.log(index);
-        res.send('done');
+        return res.status(404).send('user not found');
     })
 })
 
